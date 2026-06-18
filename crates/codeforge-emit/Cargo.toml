@@ -1,0 +1,10 @@
+[package]
+name = "codeforge-emit"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+description = "Code emission primitives for CodeForge generators"
+
+[dependencies]

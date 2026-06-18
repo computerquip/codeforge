@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/codeforge-emit",
+    "crates/codeforge-cpp",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["CodeForge Contributors"]
+repository = "https://github.com/yourusername/codeforge"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+codeforge-emit = { path = "crates/codeforge-emit" }
+codeforge-cpp = { path = "crates/codeforge-cpp" }
