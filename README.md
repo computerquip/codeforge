@@ -16,7 +16,7 @@ Add `codeforge-cpp` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-codeforge-cpp = { path = "path/to/codeforge-cpp" }
+codeforge-cpp = "0.1.0"
 ```
 
 Build an AST and emit C++ code:

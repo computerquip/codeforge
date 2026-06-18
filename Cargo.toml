@@ -13,5 +13,5 @@ repository = "https://github.com/computerquip/codeforge"
 license = "MIT-0"
 
 [workspace.dependencies]
-codeforge-emit = { path = "crates/codeforge-emit" }
-codeforge-cpp = { path = "crates/codeforge-cpp" }
+codeforge-emit = { version = "0.1.0", path = "crates/codeforge-emit" }
+codeforge-cpp = { version = "0.1.0", path = "crates/codeforge-cpp" }
