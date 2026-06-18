@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-CodeForge is a Rust library for generating C++ code through an AST-based approach. It provides structured type definitions and emission primitives to build C++ code generators.
+CodeForge is a Rust library for generating source code through an AST-based approach. It provides language-agnostic emission primitives and pluggable AST backends for target languages.
 
 ## Workspace Structure
 
-- `codeforge-emit`: Core emission primitives (`CodeWriter`, `Emit` trait)
-- `codeforge-cpp`: C++ AST definitions and per-node emission implementations
+- `codeforge-emit`: Language-agnostic emission primitives (`CodeWriter`, `Emit` trait)
+- `codeforge-cpp`: C++ backend — AST definitions and per-node emission implementations
 
 ## Commands
 

@@ -1,16 +1,16 @@
 # CodeForge
 
-CodeForge is a Rust library for generating C++ code through an AST-based approach. It provides structured type definitions and emission primitives to build C++ code generators.
+CodeForge is a Rust library for generating source code through an AST-based approach. It provides language-agnostic emission primitives and pluggable AST backends for target languages.
 
 ## Workspace Structure
 
 ```
 codeforge/
-├── codeforge-emit/    # Core emission primitives (CodeWriter, Emit trait)
-└── codeforge-cpp/     # C++ AST definitions and per-node emission
+├── codeforge-emit/    # Language-agnostic emission primitives (CodeWriter, Emit trait)
+└── codeforge-cpp/     # C++ backend — AST definitions and per-node emission
 ```
 
-## Usage
+## C++ Backend Usage (`codeforge-cpp`)
 
 Add `codeforge-cpp` to your `Cargo.toml`:
 
@@ -56,6 +56,11 @@ println!("{}", cpp_code);
 
 ## Features
 
+**Emission core (`codeforge-emit`)**
+- **Language-agnostic engine**: `CodeWriter` tracks indentation; `Emit` trait provides per-node codegen
+- **Composable backend API**: Implement `Emit` for your target language's AST nodes to create a new backend
+
+**C++ backend (`codeforge-cpp`)**
 - **Full C++ AST**: Functions, classes, structs, enums, templates, namespaces, typedefs
 - **Rich type system**: Primitives, pointers, references, const references, arrays, templates
 - **Statements**: Control flow (if/else, for, while), expressions, variable declarations
@@ -81,13 +86,13 @@ cargo clippy --all-features -- -D warnings
 
 ## What This Is
 
-This library gives you programmatic control over C++ code generation. You build an AST in Rust, then emit valid C++ code as strings. No templates, no string concatenation — just structured types with emission logic.
+This library gives you programmatic control over source code generation. You define a target language's AST in Rust and emit valid source code as strings — no string concatenation, just structured types with emission logic. The `codeforge-emit` core is language-agnostic; language-specific backends (e.g. `codeforge-cpp`) plug into it.
 
 ## What This Is Not
 
-- Not a C++ parser (use `tree-sitter-cpp` or similar)
-- Not a C++ compiler (this generates source code, not binaries)
-- Not preprocessor support (no `#define`, `#include` management, or macro expansion)
+- Not a source code parser (use `tree-sitter-*` or similar)
+- Not a compiler (this generates source code, not binaries)
+- Not a preprocessor (no `#define`, `#include` management, or macro expansion for the C++ backend)
 - Not a high-level framework (you build the AST manually or from your own DSL)
 
 ---
