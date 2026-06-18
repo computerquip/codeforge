@@ -9,7 +9,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 authors = ["CodeForge Contributors"]
-repository = "https://github.com/yourusername/codeforge"
+repository = "https://github.com/computerquip/codeforge"
 license = "MIT-0"
 
 [workspace.dependencies]
