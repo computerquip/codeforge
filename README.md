@@ -57,6 +57,8 @@ println!("{}", cpp_code);
 
 ## Features
 
+See the [AST Feature Reference](docs/FEATURES.md) for a complete table of all AST node types across both backends.
+
 **Emission core (`codeforge-emit`)**
 - **Language-agnostic engine**: `CodeWriter` tracks indentation; `Emit` trait provides per-node codegen
 - **Composable backend API**: Implement `Emit` for your target language's AST nodes to create a new backend
