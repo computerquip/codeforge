@@ -77,7 +77,7 @@ cargo clean && cargo build --all-features
 Golden tests in `crates/codeforge-cpp/tests/golden.rs` cover:
 - Function declarations with/without bodies
 - Class with constructor/destructor/methods/fields
-- Enums (scoped and unscoped)
+- Enums (scoped/unscoped)
 - Templates (type/non-type/template parameters)
 - Control flow (if/else, for, while)
 - Expressions, casts, literals
@@ -93,3 +93,16 @@ Golden tests in `crates/codeforge-python/tests/golden.rs` cover:
 - Expressions (binary/unary ops, calls, attributes, subscripts)
 - Literals, tuples, lists, dicts, sets, lambdas, ternary
 - PEP 8 blank-line spacing between definitions
+
+## Multi-Component Audits
+
+When verifying multiple similar components (e.g., both C++ and Python backends) for feature parity, documentation accuracy, or implementation completeness:
+
+1. **Use parallel agents** — one per component. This prevents attention decay and ensures each component gets independent scrutiny.
+
+2. **Define a per-agent checklist** that each must execute independently. For backend verification:
+   - For each AST struct, verify every field is read in `emit.rs` (flags set-but-never-emitted fields)
+   - For each documented output, verify the actual emission matches (flags wrong documentation)
+   - For each documented feature/behavior, confirm the emit path exists (flags missing implementations)
+
+3. **Both the parallelization and the checklist matter** — splitting into agents without a procedure risks inconsistent depth; a checklist on a single agent risks attention decay. The procedure guarantees thoroughness; the agents guarantee attention.

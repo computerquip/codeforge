@@ -292,6 +292,10 @@ impl Emit for Class {
         w.write_indent();
         w.write(&format!("class {}", self.name));
 
+        if self.is_final {
+            w.write(" final");
+        }
+
         if !self.base_classes.is_empty() {
             w.write(" : ");
             let bases: Vec<String> = self
@@ -319,11 +323,7 @@ impl Emit for Class {
 
         w.dedent();
         w.write_indent();
-        w.write("}");
-        if self.is_final {
-            w.write(" final");
-        }
-        w.writeln(";");
+        w.writeln("};");
     }
 }
 
@@ -708,6 +708,22 @@ impl Expression {
     }
 }
 
+fn escape_literal(s: &str, delimiter: char) -> String {
+    let mut delim_esc = String::with_capacity(2);
+    delim_esc.push('\\');
+    delim_esc.push(delimiter);
+    s.replace('\\', "\\\\")
+        .replace(delimiter, &delim_esc)
+        .replace('\n', "\\n")
+        .replace('\t', "\\t")
+        .replace('\r', "\\r")
+        .replace('\0', "\\0")
+        .replace('\x07', "\\a")
+        .replace('\x08', "\\b")
+        .replace('\x0B', "\\v")
+        .replace('\x0C', "\\f")
+}
+
 impl Literal {
     pub fn to_cpp(&self) -> String {
         match self {
@@ -720,10 +736,10 @@ impl Literal {
                     "false".to_string()
                 }
             }
-            Literal::String(s) => {
-                format!("\"{}\"", s.replace('\\', "\\\\").replace('\"', "\\\""))
+            Literal::String(s) => format!("\"{}\"", escape_literal(s, '"')),
+            Literal::Character(c) => {
+                format!("'{}'", escape_literal(&c.to_string(), '\''))
             }
-            Literal::Character(c) => format!("'{}'", c),
             Literal::Null => "nullptr".to_string(),
         }
     }
