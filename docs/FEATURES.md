@@ -30,7 +30,7 @@ Complete reference of AST node types available in each backend.
 
 | Type | Fields | Notes |
 |------|--------|-------|
-| `Class` | `name`, `base_classes`, `members`, `is_abstract`, `is_final` | |
+| `Class` | `name`, `base_classes`, `members`, `is_final` | |
 | `BaseClass` | `name`, `access`, `is_virtual` | |
 | `AccessSpecifier` (enum) | `Public`, `Protected`, `Private` | |
 | `ClassMember` (enum) | `Field`, `Method`, `Constructor`, `Destructor`, `Access`, `Conditional` | `Access` emits `public:`/`protected:`/`private:` labels |
@@ -230,15 +230,15 @@ Complete reference of AST node types available in each backend.
 | `Str` | `str` | |
 | `Bool` | `bool` | |
 | `Bytes` | `bytes` | |
-| `Any` | `typing.Any` | |
+| `Any` | `Any` | |
 | `Custom(String)` | verbatim | User-defined type name |
 | `Generic(String, Vec<Type>)` | `name[T, ...]` | |
 | `Optional(Box<Type>)` | `Optional[T]` | |
 | `Union(Vec<Type>)` | `Union[T, ...]` | |
-| `Tuple(Vec<Type>)` | `Tuple[T, ...]` | |
-| `List(Box<Type>)` | `List[T]` | |
-| `Dict(Box<Type>, Box<Type>)` | `Dict[K, V]` | |
-| `Set(Box<Type>)` | `Set[T]` | |
+| `Tuple(Vec<Type>)` | `tuple[T, ...]` | |
+| `List(Box<Type>)` | `list[T]` | |
+| `Dict(Box<Type>, Box<Type>)` | `dict[K, V]` | |
+| `Set(Box<Type>)` | `set[T]` | |
 | `Callable(Vec<Type>, Box<Type>)` | `Callable[[Args], Ret]` | |
 | `Self_` | `Self` | |
 | `Raw(String)` | verbatim | Escape hatch for custom type syntax |
@@ -334,7 +334,7 @@ Complete reference of AST node types available in each backend.
 | `Integer` | `i64` | `42` |
 | `Float` | `F64Wrapper` | `3.14` |
 | `Boolean` | `bool` | `True` / `False` |
-| `String` | `String` | `"hello"` |
+| `String` | `String` | `'hello'` |
 | `None_` | — | `None` |
 
 ---

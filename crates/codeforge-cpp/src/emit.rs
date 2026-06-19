@@ -362,6 +362,9 @@ fn emit_conditional_class_members(
 
 fn emit_constructor(w: &mut CodeWriter, class_name: &str, ctor: &Constructor) {
     w.write_indent();
+    if ctor.is_explicit {
+        w.write("explicit ");
+    }
     w.write(&format!("{}(", class_name));
 
     let params: Vec<String> = ctor
@@ -371,6 +374,14 @@ fn emit_constructor(w: &mut CodeWriter, class_name: &str, ctor: &Constructor) {
         .collect();
     w.write(&params.join(", "));
     w.write(")");
+
+    if ctor.is_defaulted {
+        w.writeln(" = default;");
+        return;
+    } else if ctor.is_deleted {
+        w.writeln(" = delete;");
+        return;
+    }
 
     if !ctor.initializer_list.is_empty() {
         w.writeln(" :");

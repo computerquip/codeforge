@@ -106,7 +106,6 @@ pub struct Class {
     pub name: String,
     pub base_classes: Vec<BaseClass>,
     pub members: Vec<ClassMember>,
-    pub is_abstract: bool,
     pub is_final: bool,
 }
 

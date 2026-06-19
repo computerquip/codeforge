@@ -282,7 +282,6 @@ fn class_with_ctor_dtor_methods() {
                 is_noexcept: false,
             }),
         ],
-        is_abstract: true,
         is_final: false,
     })]);
 
@@ -664,7 +663,6 @@ fn template_class() {
                     is_noexcept: true,
                 }),
             ],
-            is_abstract: false,
             is_final: false,
         })),
     }))]);
@@ -708,7 +706,6 @@ fn template_with_defaults() {
             name: "HashMap".into(),
             base_classes: vec![],
             members: vec![],
-            is_abstract: false,
             is_final: false,
         })),
     }))]);
