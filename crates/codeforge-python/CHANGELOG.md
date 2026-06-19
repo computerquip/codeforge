@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/computerquip/codeforge/compare/codeforge-python-v0.1.0...codeforge-python-v0.2.0) - 2026-06-19
+
+### Added
+
+- *(cpp)* add preprocessor directives and conditional compilation
+
 ## [0.1.0](https://github.com/computerquip/codeforge/releases/tag/codeforge-python-v0.1.0) - 2026-06-18
 
 ### Other
