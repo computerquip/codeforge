@@ -7,13 +7,13 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["CodeForge Contributors"]
 repository = "https://github.com/computerquip/codeforge"
 license = "MIT-0"
 
 [workspace.dependencies]
-codeforge-emit = { version = "0.2.0", path = "crates/codeforge-emit" }
-codeforge-cpp = { version = "0.2.0", path = "crates/codeforge-cpp" }
-codeforge-python = { version = "0.2.0", path = "crates/codeforge-python" }
+codeforge-emit = { version = "0.3.0", path = "crates/codeforge-emit" }
+codeforge-cpp = { version = "0.3.0", path = "crates/codeforge-cpp" }
+codeforge-python = { version = "0.3.0", path = "crates/codeforge-python" }
