@@ -2,17 +2,46 @@ use codeforge_emit::{CodeWriter, Emit};
 
 use crate::ast::*;
 
+fn assert_no_newlines(s: &str, field: &str) {
+    assert!(
+        !s.contains('\n') && !s.contains('\r'),
+        "Directive {field} must not contain newlines: {s:?}"
+    );
+}
+
+fn assert_valid_include_system(s: &str) {
+    assert_no_newlines(s, "Include::System");
+    assert!(
+        !s.contains('<') && !s.contains('>'),
+        "Include::System name must not contain '<' or '>': {s:?}"
+    );
+}
+
+fn assert_valid_include_local(s: &str) {
+    assert_no_newlines(s, "Include::Local");
+    assert!(
+        !s.contains('"'),
+        "Include::Local name must not contain '\"': {s:?}"
+    );
+}
+
+fn assert_valid_ident(s: &str, field: &str) {
+    assert_no_newlines(s, field);
+    assert!(
+        !s.is_empty()
+            && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            && !s.as_bytes()[0].is_ascii_digit(),
+        "{field} must be a valid C identifier: {s:?}"
+    );
+}
+
 impl Emit for Program {
     fn emit(&self, w: &mut CodeWriter) {
-        for include in &self.includes {
-            if include.starts_with('<') {
-                w.line(&format!("#include {}", include));
-            } else {
-                w.line(&format!("#include \"{}\"", include));
-            }
+        for directive in &self.directives {
+            directive.emit(w);
         }
 
-        if !self.includes.is_empty() {
+        if !self.directives.is_empty() {
             w.blank();
         }
 
@@ -65,8 +94,93 @@ impl Emit for Declaration {
             Declaration::Enum(e) => e.emit(w),
             Declaration::Typedef(t) => t.emit(w),
             Declaration::Template(t) => t.emit(w),
+            Declaration::Conditional(c) => c.emit(w),
         }
     }
+}
+
+impl Emit for Include {
+    fn emit(&self, w: &mut CodeWriter) {
+        match self {
+            Include::System(name) => {
+                assert_valid_include_system(name);
+                w.writeln(&format!("#include <{}>", name));
+            }
+            Include::Local(name) => {
+                assert_valid_include_local(name);
+                w.writeln(&format!("#include \"{}\"", name));
+            }
+        }
+    }
+}
+
+impl Emit for Directive {
+    fn emit(&self, w: &mut CodeWriter) {
+        match self {
+            Directive::Include(include) => include.emit(w),
+            Directive::Define { name, value } => {
+                assert_valid_ident(name, "Directive::Define name");
+                if let Some(val) = value {
+                    assert_no_newlines(val, "Directive::Define value");
+                    w.writeln(&format!("#define {} {}", name, val));
+                } else {
+                    w.writeln(&format!("#define {}", name));
+                }
+            }
+            Directive::Undef(name) => {
+                assert_valid_ident(name, "Directive::Undef");
+                w.writeln(&format!("#undef {}", name));
+            }
+            Directive::Ifdef(name) => {
+                assert_valid_ident(name, "Directive::Ifdef");
+                w.writeln(&format!("#ifdef {}", name));
+            }
+            Directive::Ifndef(name) => {
+                assert_valid_ident(name, "Directive::Ifndef");
+                w.writeln(&format!("#ifndef {}", name));
+            }
+            Directive::Error(msg) => {
+                assert_no_newlines(msg, "Directive::Error");
+                w.writeln(&format!("#error {}", msg));
+            }
+            Directive::Pragma(pragma) => {
+                assert_no_newlines(pragma, "Directive::Pragma");
+                w.writeln(&format!("#pragma {}", pragma));
+            }
+            Directive::Conditional(c) => c.emit(w),
+        }
+    }
+}
+
+impl<T: Emit> Emit for Conditional<T> {
+    fn emit(&self, w: &mut CodeWriter) {
+        emit_conditional_block(self, w, |item, w| item.emit(w));
+    }
+}
+
+fn emit_conditional_block<T, F>(c: &Conditional<T>, w: &mut CodeWriter, mut emit_item: F)
+where
+    F: FnMut(&T, &mut CodeWriter),
+{
+    assert_no_newlines(&c.condition, "Conditional::condition");
+    w.writeln(&format!("#if {}", c.condition));
+    for item in &c.body {
+        emit_item(item, w);
+    }
+    for (elif_cond, elif_body) in &c.elif_branches {
+        assert_no_newlines(elif_cond, "Conditional::elif_branches condition");
+        w.writeln(&format!("#elif {}", elif_cond));
+        for item in elif_body {
+            emit_item(item, w);
+        }
+    }
+    if let Some(else_body) = &c.else_body {
+        w.writeln("#else");
+        for item in else_body {
+            emit_item(item, w);
+        }
+    }
+    w.writeln("#endif");
 }
 
 impl Emit for Template {
@@ -232,7 +346,18 @@ fn emit_class_member(w: &mut CodeWriter, class_name: &str, member: &ClassMember)
         ClassMember::Destructor(dt) => {
             emit_destructor(w, class_name, dt);
         }
+        ClassMember::Conditional(c) => {
+            emit_conditional_class_members(w, class_name, c);
+        }
     }
+}
+
+fn emit_conditional_class_members(
+    w: &mut CodeWriter,
+    class_name: &str,
+    c: &Conditional<ClassMember>,
+) {
+    emit_conditional_block(c, w, |item, w| emit_class_member(w, class_name, item));
 }
 
 fn emit_constructor(w: &mut CodeWriter, class_name: &str, ctor: &Constructor) {
@@ -408,6 +533,9 @@ impl Emit for Statement {
             }
             Statement::Raw(text) => {
                 w.line(text);
+            }
+            Statement::Conditional(c) => {
+                c.emit(w);
             }
         }
     }

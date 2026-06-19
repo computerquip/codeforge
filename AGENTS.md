@@ -42,7 +42,12 @@ cargo clean && cargo build --all-features
 - AST types split by context: `Field` (class/struct members with access specifiers) vs `LocalVariable` (statement/namespace scope)
 - Per-node `Emit` implementations in `emit.rs`
 - Inline conversion methods: `Type::to_cpp()`, `Expression::to_cpp()`, `Literal::to_cpp()`
-- Template support via `TemplateDeclaration` wrapping any `Declaration`
+- Template support via `Template` wrapping any `Declaration`
+- Preprocessor directives: `Directive` enum with `Include`, `Define`, `Undef`, `Ifdef`, `Ifndef`, `Error`, `Pragma`, `Conditional`
+- `Include` enum: `System(String)` (angle brackets) and `Local(String)` (double quotes)
+- `Conditional<T>` wraps declarations, class members, or statements in `#if`/`#elif`/`#else`/`#endif` blocks
+- `ClassMember::Conditional` uses `emit_conditional_class_members()` to pass class name context for constructors/destructors
+- `Program.directives` replaces former `includes` field
 
 ### Python AST (`codeforge-python`)
 - AST includes `Module`, `FunctionDef`, `ClassDef`, imports, decorators, and full statement/expression types
@@ -58,7 +63,7 @@ cargo clean && cargo build --all-features
 1. **Variable split**: `Field` and `LocalVariable` are separate types to eliminate the contextual `access` field inconsistency
 2. **Per-node Emit**: Each AST node implements `Emit` directly rather than using a central generator
 3. **Context-aware emission**: `Constructor`/`Destructor` use free functions `emit_constructor()`/`emit_destructor()` that take class name context
-4. **No macros**: Template declarations supported, but preprocessor macros intentionally omitted
+4. **Conditional compilation**: `Conditional<T>` generic struct supports `#if`/`#elif`/`#else`/`#endif` for declarations, class members, and statements
 
 ## Code Style
 
@@ -77,6 +82,7 @@ Golden tests in `crates/codeforge-cpp/tests/golden.rs` cover:
 - Control flow (if/else, for, while)
 - Expressions, casts, literals
 - Structs, typedefs, namespaces
+- Preprocessor directives (#include with system/local includes)
 
 Golden tests in `crates/codeforge-python/tests/golden.rs` cover:
 - Function definitions with params, annotations, defaults, *args/**kwargs

@@ -629,8 +629,8 @@ fn expressions_and_literals() {
     let cases: Vec<(Expression, &str)> = vec![
         (Expression::Literal(Literal::Integer(42)), "42"),
         (
-            Expression::Literal(Literal::Float(F64Wrapper(3.14))),
-            "3.14",
+            Expression::Literal(Literal::Float(F64Wrapper(2.72))),
+            "2.72",
         ),
         (Expression::Literal(Literal::Boolean(true)), "True"),
         (Expression::Literal(Literal::Boolean(false)), "False"),

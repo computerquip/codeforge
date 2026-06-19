@@ -2,7 +2,7 @@ use codeforge_cpp::*;
 
 fn program(declarations: Vec<Declaration>) -> Program {
     Program {
-        includes: vec![],
+        directives: vec![],
         namespaces: vec![],
         declarations,
     }
@@ -137,7 +137,7 @@ enum Direction {
 #[test]
 fn namespace_with_function() {
     let p = Program {
-        includes: vec![],
+        directives: vec![],
         namespaces: vec![Namespace {
             name: "math".into(),
             declarations: vec![Declaration::Function(Function {
@@ -306,7 +306,11 @@ class Animal {
 #[test]
 fn includes_and_multiple_declarations() {
     let p = Program {
-        includes: vec!["<iostream>".into(), "<vector>".into(), "myheader.h".into()],
+        directives: vec![
+            Directive::Include(Include::System("iostream".into())),
+            Directive::Include(Include::System("vector".into())),
+            Directive::Include(Include::Local("myheader.h".into())),
+        ],
         namespaces: vec![],
         declarations: vec![
             Declaration::Typedef(Typedef {
@@ -524,9 +528,9 @@ void countdown(int32_t n) {
 #[test]
 fn expressions_and_literals() {
     let p = program(vec![Declaration::Variable(LocalVariable {
-        name: "pi".into(),
+        name: "golden".into(),
         var_type: Type::Float64,
-        initializer: Some(Expression::Literal(Literal::Float(F64Wrapper(3.14159)))),
+        initializer: Some(Expression::Literal(Literal::Float(F64Wrapper(1.61803)))),
         is_const: true,
         is_static: false,
         is_thread_local: false,
@@ -534,7 +538,7 @@ fn expressions_and_literals() {
 
     let output = emit(&p);
     let expected = "\
-const double pi = 3.14159;
+const double golden = 1.61803;
 ";
     assert_eq!(output, expected);
 }

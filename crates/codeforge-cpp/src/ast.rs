@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Program {
-    pub includes: Vec<String>,
+    pub directives: Vec<Directive>,
     pub namespaces: Vec<Namespace>,
     pub declarations: Vec<Declaration>,
 }
@@ -26,6 +26,36 @@ pub enum Declaration {
     Enum(Enum),
     Typedef(Typedef),
     Template(Box<Template>),
+    Conditional(Conditional<Declaration>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Conditional<T> {
+    pub condition: String,
+    pub body: Vec<T>,
+    pub elif_branches: Vec<(String, Vec<T>)>,
+    pub else_body: Option<Vec<T>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum Include {
+    System(String),
+    Local(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum Directive {
+    Include(Include),
+    Define { name: String, value: Option<String> },
+    Undef(String),
+    Ifdef(String),
+    Ifndef(String),
+    Error(String),
+    Pragma(String),
+    Conditional(Conditional<Directive>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -104,6 +134,7 @@ pub enum ClassMember {
     Constructor(Constructor),
     Destructor(Destructor),
     Access(AccessSpecifier),
+    Conditional(Conditional<ClassMember>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -238,6 +269,7 @@ pub enum Statement {
     Continue,
     Comment(String),
     Raw(String),
+    Conditional(Conditional<Statement>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

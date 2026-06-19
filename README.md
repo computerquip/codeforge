@@ -26,7 +26,7 @@ Build an AST and emit C++ code:
 use codeforge_cpp::*;
 
 let program = Program {
-    includes: vec!["<iostream>".into()],
+    directives: vec![Directive::Include(Include::System("iostream".into()))],
     namespaces: vec![],
     declarations: vec![Declaration::Function(Function {
         name: "greet".into(),
@@ -64,6 +64,8 @@ println!("{}", cpp_code);
 **C++ backend (`codeforge-cpp`)**
 - **Full C++ AST**: Functions, classes, structs, enums, templates, namespaces, typedefs
 - **Rich type system**: Primitives, pointers, references, const references, arrays, templates
+- **Preprocessor directives**: `#include`, `#define`, `#ifdef`/`#ifndef`, `#if`/`#elif`/`#else`/`#endif`
+- **Conditional compilation**: `Conditional<T>` wraps declarations, class members, or statements in `#if` blocks
 - **Statements**: Control flow (if/else, for, while), expressions, variable declarations
 - **Templates**: Type parameters, non-type parameters, template parameters with defaults
 - **Per-node emission**: Clean separation between AST structure and code generation
@@ -102,7 +104,7 @@ This library gives you programmatic control over source code generation. You def
 
 - Not a source code parser (use `tree-sitter-*` or similar)
 - Not a compiler (this generates source code, not binaries)
-- Not a preprocessor (no `#define`, `#include` management, or macro expansion for the C++ backend)
+- Not a full preprocessor (supports `#include`, `#define`, `#if`/`#elif`/`#else`/`#endif`, but no macro expansion)
 - Not a high-level framework (you build the AST manually or from your own DSL)
 
 ---
