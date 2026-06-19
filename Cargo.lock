@@ -15,6 +15,14 @@ name = "codeforge-emit"
 version = "0.1.0"
 
 [[package]]
+name = "codeforge-python"
+version = "0.1.0"
+dependencies = [
+ "codeforge-emit",
+ "serde",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"

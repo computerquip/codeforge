@@ -6,8 +6,9 @@ CodeForge is a Rust library for generating source code through an AST-based appr
 
 ```
 codeforge/
-├── codeforge-emit/    # Language-agnostic emission primitives (CodeWriter, Emit trait)
-└── codeforge-cpp/     # C++ backend — AST definitions and per-node emission
+├── codeforge-emit/       # Language-agnostic emission primitives (CodeWriter, Emit trait)
+├── codeforge-cpp/        # C++ backend — AST definitions and per-node emission
+└── codeforge-python/     # Python backend — AST definitions and per-node emission
 ```
 
 ## C++ Backend Usage (`codeforge-cpp`)
@@ -66,6 +67,15 @@ println!("{}", cpp_code);
 - **Statements**: Control flow (if/else, for, while), expressions, variable declarations
 - **Templates**: Type parameters, non-type parameters, template parameters with defaults
 - **Per-node emission**: Clean separation between AST structure and code generation
+- **Optional serde support**: Serialize/deserialize AST nodes
+
+**Python backend (`codeforge-python`)**
+- **Full Python AST**: Functions, classes, imports, decorators, control flow
+- **Type annotations**: Type hints with generics, Optional, Union, Callable
+- **Pythonic output**: PEP 8 spacing (2 blank lines between top-level defs, 1 between class methods)
+- **Statements**: if/elif/else, for/while (with else clauses), break, continue, pass
+- **Expressions**: Binary/unary ops (including `in`, `not in`, `is`, `is not`), tuples, lists, dicts, sets, lambdas, ternary
+- **Function signatures**: Parameters with annotations/defaults, *args, keyword-only, **kwargs
 - **Optional serde support**: Serialize/deserialize AST nodes
 
 ## Development

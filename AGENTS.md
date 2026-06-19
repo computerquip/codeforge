@@ -8,6 +8,7 @@ CodeForge is a Rust library for generating source code through an AST-based appr
 
 - `codeforge-emit`: Language-agnostic emission primitives (`CodeWriter`, `Emit` trait)
 - `codeforge-cpp`: C++ backend — AST definitions and per-node emission implementations
+- `codeforge-python`: Python backend — AST definitions and per-node emission implementations
 
 ## Commands
 
@@ -43,6 +44,15 @@ cargo clean && cargo build --all-features
 - Inline conversion methods: `Type::to_cpp()`, `Expression::to_cpp()`, `Literal::to_cpp()`
 - Template support via `TemplateDeclaration` wrapping any `Declaration`
 
+### Python AST (`codeforge-python`)
+- AST includes `Module`, `FunctionDef`, `ClassDef`, imports, decorators, and full statement/expression types
+- Per-node `Emit` implementations in `emit.rs`
+- Inline conversion methods: `Type::to_python()`, `Expression::to_python()`, `Literal::to_python()`
+- Shared `emit_body()` helper with configurable spacing between definitions (2-blank at module level, 1-blank in class bodies)
+- PEP 8 blank-line rules: 2 blank lines between top-level defs/classes
+- `pass` emitted automatically for empty bodies without docstrings
+- `F64Wrapper` newtype mirrors C++ crate's approach for `Literal::Float`
+
 ## Key Design Decisions
 
 1. **Variable split**: `Field` and `LocalVariable` are separate types to eliminate the contextual `access` field inconsistency
@@ -67,3 +77,13 @@ Golden tests in `crates/codeforge-cpp/tests/golden.rs` cover:
 - Control flow (if/else, for, while)
 - Expressions, casts, literals
 - Structs, typedefs, namespaces
+
+Golden tests in `crates/codeforge-python/tests/golden.rs` cover:
+- Function definitions with params, annotations, defaults, *args/**kwargs
+- Class definitions with bases, keywords, methods
+- Imports (simple, from, star, aliases)
+- Control flow (if/elif/else, for/while with else clauses)
+- Decorators, docstrings, async functions
+- Expressions (binary/unary ops, calls, attributes, subscripts)
+- Literals, tuples, lists, dicts, sets, lambdas, ternary
+- PEP 8 blank-line spacing between definitions

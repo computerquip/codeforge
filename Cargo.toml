@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/codeforge-emit",
     "crates/codeforge-cpp",
+    "crates/codeforge-python",
 ]
 
 [workspace.package]
@@ -15,3 +16,4 @@ license = "MIT-0"
 [workspace.dependencies]
 codeforge-emit = { version = "0.1.0", path = "crates/codeforge-emit" }
 codeforge-cpp = { version = "0.1.0", path = "crates/codeforge-cpp" }
+codeforge-python = { version = "0.1.0", path = "crates/codeforge-python" }
