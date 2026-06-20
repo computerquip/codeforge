@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/computerquip/codeforge/compare/codeforge-python-v0.3.0...codeforge-python-v0.4.0) - 2026-06-20
+
+### Added
+
+- *(python)* add AnnAssign, Raise, and Literal::Bytes to AST
+
 ## [0.2.0](https://github.com/computerquip/codeforge/compare/codeforge-python-v0.1.0...codeforge-python-v0.2.0) - 2026-06-19
 
 ### Added
