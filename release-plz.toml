@@ -1,0 +1,11 @@
+[workspace]
+# Create release PRs instead of publishing directly
+release_always = false
+changelog_update = true
+dependencies_update = true
+git_release_enable = true
+publish_allow_dirty = true
+
+[[package]]
+name = "codeforge-python"
+release = true
