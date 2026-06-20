@@ -8,7 +8,8 @@ CodeForge is a Rust library for generating source code through an AST-based appr
 codeforge/
 ├── codeforge-emit/       # Language-agnostic emission primitives (CodeWriter, Emit trait)
 ├── codeforge-cpp/        # C++ backend — AST definitions and per-node emission
-└── codeforge-python/     # Python backend — AST definitions and per-node emission
+├── codeforge-python/     # Python backend — AST definitions and per-node emission
+└── codeforge-rust/       # Rust backend — AST definitions and per-node emission
 ```
 
 ## C++ Backend Usage (`codeforge-cpp`)
@@ -55,9 +56,45 @@ let cpp_code = emit(&program);
 println!("{}", cpp_code);
 ```
 
+## Rust Backend Usage (`codeforge-rust`)
+
+Add `codeforge-rust` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+codeforge-rust = "0.3.0"
+```
+
+Build an AST and emit Rust code:
+
+```rust
+use codeforge_rust::*;
+
+let module = Module {
+    attributes: vec![Attribute::derive(vec!["Debug".into()])],
+    items: vec![
+        Item::Struct(Struct {
+            attributes: vec![Attribute::derive(vec!["Debug".into()])],
+            visibility: Visibility::Public,
+            name: "Greeter".into(),
+            generics: Generics::empty(),
+            kind: StructKind::Named(vec![Field {
+                attributes: vec![],
+                visibility: Visibility::Private,
+                name: "name".into(),
+                ty: Type::path("String"),
+            }]),
+        }),
+    ],
+};
+
+let rust_code = emit(&module);
+println!("{}", rust_code);
+```
+
 ## Features
 
-See the [AST Feature Reference](docs/FEATURES.md) for a complete table of all AST node types across both backends.
+See the [AST Feature Reference](docs/FEATURES.md) for a complete table of all AST node types across all backends.
 
 **Emission core (`codeforge-emit`)**
 - **Language-agnostic engine**: `CodeWriter` tracks indentation; `Emit` trait provides per-node codegen
@@ -80,6 +117,17 @@ See the [AST Feature Reference](docs/FEATURES.md) for a complete table of all AS
 - **Statements**: if/elif/else, for/while (with else clauses), break, continue, pass
 - **Expressions**: Binary/unary ops (including `in`, `not in`, `is`, `is not`), tuples, lists, dicts, sets, lambdas, ternary
 - **Function signatures**: Parameters with annotations/defaults, *args, keyword-only, **kwargs
+- **Optional serde support**: Serialize/deserialize AST nodes
+
+**Rust backend (`codeforge-rust`)**
+- **Full Rust AST**: Functions, structs, enums, traits, impls, use declarations, modules
+- **Generics**: Type/lifetime/const params, where clauses, turbofish
+- **Visibility**: pub, pub(crate), pub(super), pub(in path)
+- **Attributes & derives**: `#[derive(...)]`, `#[inline]`, `#![allow(...)]`
+- **Statements**: let (with mut, type annotations, let-else), expression stmts, nested items
+- **Expressions**: binary/unary ops, method calls, field/index access, references/deref/try, casts, closures
+- **Control flow**: if/else if/else, if let, match with guards, loop/while/for with labels
+- **Types**: references with lifetimes, raw pointers, tuples, slices, arrays, dyn/impl trait, fn pointers
 - **Optional serde support**: Serialize/deserialize AST nodes
 
 ## Development

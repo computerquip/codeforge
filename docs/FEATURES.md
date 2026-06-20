@@ -339,20 +339,220 @@ Complete reference of AST node types available in each backend.
 
 ---
 
+## Rust Backend (`codeforge-rust`)
+
+### Module Structure
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Module` | `attributes`, `items` | Top-level entry point. Inner attributes emitted first |
+
+### Items
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Item` (enum) | `Use`, `Function`, `Struct`, `Enum`, `Trait`, `Impl`, `TypeAlias`, `Const`, `Static`, `Mod`, `Raw` | Top-level item variants |
+| `Visibility` (enum) | `Private`, `Public`, `Crate`, `Super`, `Restricted(String)` | Rust visibility modifiers |
+| `Attribute` | `path`, `tokens`, `is_inner` | `#[path(tokens)]` or `#![...]` when inner. `Attribute::derive()` helper |
+
+### Use Declarations
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Use` | `visibility`, `tree` | |
+| `UseTree` (enum) | `Path`, `Alias`, `Glob`, `Group` | `use std::io`, `use path as alias`, `use prefix::*`, `use prefix::{a, b}` |
+
+### Functions
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Function` | `attributes`, `visibility`, `name`, `generics`, `parameters`, `return_type`, `body`, `is_async`, `is_const`, `is_unsafe`, `abi` | `body: None` → trait method signature |
+| `Parameter` (enum) | `Receiver`, `Typed` | Self receivers and typed params |
+| `Receiver` | `is_ref`, `is_mut`, `lifetime` | Covers `self`, `&self`, `&mut self`, `&'a self` |
+
+### Generics
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Generics` | `params`, `where_clause` | Empty → emits nothing |
+| `GenericParam` (enum) | `Lifetime`, `Type`, `Const` | Each with optional bounds/defaults |
+| `WherePredicate` | `ty`, `bounds` | `T: Bound + Bound2` |
+
+### Structs & Enums
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Struct` | `attributes`, `visibility`, `name`, `generics`, `kind` | |
+| `StructKind` (enum) | `Unit`, `Tuple`, `Named` | `struct Foo;`, `struct Foo(i32)`, `struct Foo { x: i32 }` |
+| `Enum` | `attributes`, `visibility`, `name`, `generics`, `variants` | |
+| `EnumVariant` | `attributes`, `name`, `kind`, `discriminant` | |
+| `VariantKind` (enum) | `Unit`, `Tuple`, `Named` | Variant data shapes |
+| `Field` | `attributes`, `visibility`, `name`, `ty` | Named struct/variant field |
+| `TupleField` | `attributes`, `visibility`, `ty` | Tuple struct field |
+
+### Traits & Impls
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Trait` | `attributes`, `visibility`, `name`, `generics`, `supertraits`, `items` | |
+| `Impl` | `attributes`, `generics`, `trait_`, `self_ty`, `is_unsafe`, `items` | `trait_: Some` → `impl Trait for Type` |
+| `AssocItem` (enum) | `Function`, `Const`, `Type`, `Raw` | |
+| `AssocType` | `attributes`, `name`, `generics`, `bounds`, `value` | `type Item;` or `type Item = T;` |
+
+### Other Items
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `TypeAlias` | `attributes`, `visibility`, `name`, `generics`, `ty` | `type Name<T> = ...;` |
+| `Const` | `attributes`, `visibility`, `name`, `ty`, `value` | `value: None` for trait consts |
+| `Static` | `attributes`, `visibility`, `name`, `ty`, `is_mut`, `value` | `static`/`static mut` |
+| `Mod` | `attributes`, `visibility`, `name`, `items` | `None` → `mod foo;`, `Some` → `mod foo { ... }` |
+
+### Types
+
+| Variant | Output | Notes |
+|---------|--------|-------|
+| `Unit` | `()` | |
+| `Bool` | `bool` | |
+| `Char` | `char` | |
+| `Str` | `str` | |
+| `I8`..`I128` | `i8`..`i128` | Signed integers |
+| `U8`..`U128` | `u8`..`u128` | Unsigned integers |
+| `Isize`/`Usize` | `isize`/`usize` | |
+| `F32`/`F64` | `f32`/`f64` | |
+| `Path(Path)` | user-defined | Named/generic types via `Path` |
+| `Reference { lifetime, is_mut, inner }` | `&T`, `&mut T`, `&'a T` | |
+| `Pointer { is_mut, inner }` | `*const T`/`*mut T` | |
+| `Tuple(Vec<Type>)` | `(A, B)` | |
+| `Slice(Box<Type>)` | `[T]` | |
+| `Array(Box<Type>, Expression)` | `[T; N]` | |
+| `TraitObject(Vec<Type>)` | `dyn A + B` | |
+| `ImplTrait(Vec<Type>)` | `impl A + B` | |
+| `Fn { params, return_type }` | `fn(A, B) -> C` | |
+| `Infer` | `_` | |
+| `SelfType` | `Self` | |
+| `Raw(String)` | verbatim | Escape hatch |
+
+### Statements & Blocks
+
+| Type | Fields | Notes |
+|------|--------|-------|
+| `Block` | `statements`, `trailing_expr` | Optional trailing expression (no `;`) |
+| `Statement` (enum) | `Let`, `Expression`, `Item`, `Comment`, `Raw` | |
+| `Let` | `pattern`, `ty`, `value`, `is_mut`, `else_block` | Supports `let ... else` |
+
+### Patterns
+
+| Variant | Notes |
+|---------|-------|
+| `Wildcard` | `_` |
+| `Rest` | `..` |
+| `Ident { name, is_ref, is_mut, subpattern }` | Binding pattern with optional `@` subpattern |
+| `Literal(Literal)` | Literal pattern |
+| `Tuple(Vec<Pattern>)` | `(a, b)` |
+| `Slice(Vec<Pattern>)` | `[first, ..]` |
+| `TupleStruct { path, elems }` | `Some(val)` |
+| `Struct { path, fields, has_rest }` | `Point { x, y: py, .. }` |
+| `Or(Vec<Pattern>)` | `1 | 2` |
+| `Reference { is_mut, inner }` | `&x`, `&mut x` |
+| `Path(Path)` | `None` |
+| `Raw(String)` | Escape hatch |
+
+### Expressions
+
+| Variant | Notes |
+|---------|-------|
+| `Literal(Literal)` | |
+| `Path(Path)` | Identifiers & paths |
+| `Binary { left, op, right }` | |
+| `Unary { op, operand }` | |
+| `Call { callee, args }` | |
+| `MethodCall { receiver, method, turbofish, args }` | `.method::<T>(args)` |
+| `Field { base, name }` | `obj.field` |
+| `Index { base, index }` | `arr[i]` |
+| `Reference { is_mut, inner }` | `&x`, `&mut x` |
+| `Deref(inner)` | `*ptr` |
+| `Try(inner)` | `expr?` |
+| `Cast { expr, ty }` | `expr as T` |
+| `Tuple(Vec<Expression>)` | `(a, b)` |
+| `Array(Vec<Expression>)` | `[a, b]` |
+| `Repeat { value, count }` | `[v; n]` |
+| `StructLiteral { path, fields, rest }` | `Point { x: 1, ..base }` |
+| `Closure { is_move, params, return_type, body }` | `move |x: i32| -> i32 { ... }` |
+| `If(Box<IfExpr>)` | `if`/`else if`/`else`, `if let` |
+| `Match { scrutinee, arms }` | `match` with guards |
+| `Loop { label, body }` | `'label: loop { ... }` |
+| `While { label, condition, body }` | `while`/`while let` |
+| `For { label, pattern, iter, body }` | `for pat in iter` |
+| `Block(Block)` | `{ ... }` |
+| `Return`, `Break`, `Continue` | With optional labels/values |
+| `Range { start, end, inclusive }` | `..`, `..=`, partial ranges |
+| `MacroCall { path, tokens }` | `println!(...)`, `vec![...]` |
+| `Raw(String)` | Escape hatch |
+
+### Operators
+
+| BinaryOperator | Output | UnaryOperator | Output |
+|---------------|--------|---------------|--------|
+| `Add` | `+` | `Neg` | `-` |
+| `Sub` | `-` | `Not` | `!` |
+| `Mul` | `*` | | |
+| `Div` | `/` | | |
+| `Rem` | `%` | | |
+| `And` | `&&` | | |
+| `Or` | `\|\|` | | |
+| `BitAnd` | `&` | | |
+| `BitOr` | `\|` | | |
+| `BitXor` | `^` | | |
+| `Shl` | `<<` | | |
+| `Shr` | `>>` | | |
+| `Eq` | `==` | | |
+| `Ne` | `!=` | | |
+| `Lt` | `<` | | |
+| `Le` | `<=` | | |
+| `Gt` | `>` | | |
+| `Ge` | `>=` | | |
+| `Assign` | `=` | | |
+| `AddAssign` | `+=` | | |
+| `SubAssign` | `-=` | | |
+| `MulAssign` | `*=` | | |
+| `DivAssign` | `/=` | | |
+| `RemAssign` | `%=` | | |
+| `BitAndAssign` | `&=` | | |
+| `BitOrAssign` | `\|=` | | |
+| `BitXorAssign` | `^=` | | |
+| `ShlAssign` | `<<=` | | |
+| `ShrAssign` | `>>=` | | |
+
+### Literals
+
+| Variant | Rust Type | Output Example |
+|---------|-----------|----------------|
+| `Integer` | `i64` | `42` |
+| `UnsignedInteger` | `u64` | `10u64` |
+| `Float` | `F64Wrapper` | `3.14`, `f64::NAN`, `f64::INFINITY` |
+| `Boolean` | `bool` | `true` / `false` |
+| `String` | `String` | `"hello"` |
+| `Char` | `char` | `'a'` |
+| `ByteString` | `Vec<u8>` | `b"hello"` |
+| `Raw` | — | Verbatim |
+
+---
+
 ## Shared Patterns
 
 ### Escape Hatches
 
-Both backends provide `Raw(String)` variants in `Statement` and `Expression` for emitting arbitrary text when the AST doesn't cover a specific construct. The Python backend additionally provides `Type::Raw(String)` for custom type annotations.
+All three backends provide `Raw(String)` variants in `Statement` and `Expression` for emitting arbitrary text when the AST doesn't cover a specific construct.
 
 ### Serde Support
 
-All AST types in both backends conditionally derive `Serialize` and `Deserialize` behind the `serde` feature flag.
+All AST types in all backends conditionally derive `Serialize` and `Deserialize` behind the `serde` feature flag.
 
 ### F64Wrapper
 
-Both backends wrap `f64` in a `F64Wrapper` newtype that implements `Eq` and `Hash` via `f64::to_bits()`, allowing literals to be used in hash-based collections.
+All backends wrap `f64` in a `F64Wrapper` newtype that implements `Eq` and `Hash` via `f64::to_bits()`, allowing literals to be used in hash-based collections.
 
 ### Box Recursive Types
 
-Recursive `Statement` variants (`If`, `While`, `For`) are boxed in both backends to break size cycles. The C++ backend also boxes `Template::declaration` since it wraps `Declaration` which can contain `Template`.
+Recursive `Statement` variants (`If`, `While`, `For`) are boxed in all backends to break size cycles. The C++ backend also boxes `Template::declaration` since it wraps `Declaration` which can contain `Template`. The Rust backend boxes additional recursive paths including `Block::trailing_expr`, `Expression::Cast::ty`, loop/while/for bodies, and `IfCondition` value expressions.

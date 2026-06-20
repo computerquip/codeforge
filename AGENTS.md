@@ -9,6 +9,7 @@ CodeForge is a Rust library for generating source code through an AST-based appr
 - `codeforge-emit`: Language-agnostic emission primitives (`CodeWriter`, `Emit` trait)
 - `codeforge-cpp`: C++ backend — AST definitions and per-node emission implementations
 - `codeforge-python`: Python backend — AST definitions and per-node emission implementations
+- `codeforge-rust`: Rust backend — AST definitions and per-node emission implementations
 
 ## Commands
 
@@ -58,19 +59,33 @@ cargo clean && cargo build --all-features
 - `pass` emitted automatically for empty bodies without docstrings
 - `F64Wrapper` newtype mirrors C++ crate's approach for `Literal::Float`
 
+### Rust AST (`codeforge-rust`)
+- AST includes `Module`, `Function`, `Struct`, `Enum`, `Trait`, `Impl`, `TypeAlias`, `Const`, `Static`, `Mod`
+- Per-node `Emit` implementations in `emit.rs`
+- Inline conversion methods: `Type::to_rust()`, `Expression::to_rust()`, `Literal::to_rust()`
+- Full generic support: type params, lifetime params, const params, where clauses
+- Visibility: `Private`, `Public`, `Crate`, `Super`, `Restricted(path)`
+- Attributes/derives as first-class AST nodes
+- `Block` has optional `trailing_expr` for expression blocks
+- `emit_expr_stmt()` helper decides block-like vs value-like expression statement emission
+- `F64Wrapper` newtype for `Literal::Float`
+- `Box` recursive types: `Block::trailing_expr`, `Expression::Cast::ty`, loop/while/for bodies, `IfCondition`, `Type::Array` count
+
 ## Key Design Decisions
 
 1. **Variable split**: `Field` and `LocalVariable` are separate types to eliminate the contextual `access` field inconsistency
 2. **Per-node Emit**: Each AST node implements `Emit` directly rather than using a central generator
 3. **Context-aware emission**: `Constructor`/`Destructor` use free functions `emit_constructor()`/`emit_destructor()` that take class name context
 4. **Conditional compilation**: `Conditional<T>` generic struct supports `#if`/`#elif`/`#else`/`#endif` for declarations, class members, and statements
+5. **Expression statement dispatch**: `emit_expr_stmt()` decides block-like (if/match/loop/while/for/block) vs value-like (single-line + `;`) emission for Rust
+6. **Item spacing**: One blank line between top-level Rust items; consecutive `use` items kept tight (no blank between them)
 
 ## Code Style
 
 - Edition 2024 inherited from workspace
 - Optional serde feature on AST types via `#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]`
 - `F64Wrapper` newtype for `f64` in `Literal::Float` implements `Eq`/`Hash` via `to_bits()`
-- Box recursive types to break size cycles: `Statement::If/While/For`, `TemplateDeclaration::declaration`
+- Box recursive types to break size cycles: `Statement::If/While/For`, `Block::trailing_expr`, loop/while/for bodies, `IfCondition`, `Expression::Cast::ty`, `Type::Array` count
 
 ## Testing
 
@@ -93,6 +108,27 @@ Golden tests in `crates/codeforge-python/tests/golden.rs` cover:
 - Expressions (binary/unary ops, calls, attributes, subscripts)
 - Literals, tuples, lists, dicts, sets, lambdas, ternary
 - PEP 8 blank-line spacing between definitions
+
+Golden tests in `crates/codeforge-rust/tests/golden.rs` cover:
+- Free functions: params, generics, where clauses, async/const/unsafe, extern ABI
+- Visibility variants (pub, pub(crate), pub(super), pub(in path))
+- Attributes and derives
+- Structs (unit, tuple, named with field visibility)
+- Enums (unit/tuple/struct variants, discriminants)
+- Traits (methods, associated types/consts, supertraits)
+- Impls (inherent, trait impl, unsafe, generics with where clause)
+- Use declarations (simple, alias, glob, nested groups)
+- Type alias, const, static (incl. static mut)
+- Mod (inline and declaration form)
+- Statements (let, expression, nested items, comments)
+- Control flow (if/else if/else, if let, match with guards, loop/while/for with labels)
+- Expressions (binary/unary, method calls, field/index access, references/deref/try, casts)
+- Struct literals (with shorthand and ..rest spread)
+- Closures (move, typed, block body)
+- Macro calls, tuples, arrays, ranges
+- Types (references with lifetimes, pointers, slices, dyn/impl trait, fn pointers)
+- Literals (integers, floats incl. NaN/inf, strings with escapes, chars)
+- Inter-item spacing: consecutive use items tight, blank lines between other items
 
 ## Multi-Component Audits
 

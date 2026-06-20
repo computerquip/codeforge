@@ -4,6 +4,7 @@ members = [
     "crates/codeforge-emit",
     "crates/codeforge-cpp",
     "crates/codeforge-python",
+    "crates/codeforge-rust",
 ]
 
 [workspace.package]
@@ -17,3 +18,4 @@ license = "MIT-0"
 codeforge-emit = { version = "0.3.0", path = "crates/codeforge-emit" }
 codeforge-cpp = { version = "0.3.0", path = "crates/codeforge-cpp" }
 codeforge-python = { version = "0.3.0", path = "crates/codeforge-python" }
+codeforge-rust = { version = "0.3.0", path = "crates/codeforge-rust" }
