@@ -1212,3 +1212,152 @@ def f():
 ";
     assert_eq!(output, expected);
 }
+
+#[test]
+fn ann_assign_annotation_only() {
+    let m = module(vec![Statement::AnnAssign(AnnAssign {
+        target: Expression::Identifier("name".into()),
+        annotation: Type::Str,
+        value: None,
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "name: str\n");
+}
+
+#[test]
+fn ann_assign_with_value() {
+    let m = module(vec![Statement::AnnAssign(AnnAssign {
+        target: Expression::Identifier("age".into()),
+        annotation: Type::Int,
+        value: Some(Expression::Literal(Literal::Integer(0))),
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "age: int = 0\n");
+}
+
+#[test]
+fn ann_assign_dataclass_fields() {
+    let m = module(vec![Statement::ClassDef(ClassDef {
+        name: "Person".into(),
+        decorators: vec![Expression::Call {
+            func: Box::new(Expression::Identifier("dataclass".into())),
+            arguments: vec![],
+            keywords: vec![],
+        }],
+        bases: vec![],
+        keywords: vec![],
+        body: vec![
+            Statement::AnnAssign(AnnAssign {
+                target: Expression::Identifier("name".into()),
+                annotation: Type::Str,
+                value: None,
+            }),
+            Statement::AnnAssign(AnnAssign {
+                target: Expression::Identifier("age".into()),
+                annotation: Type::Int,
+                value: Some(Expression::Literal(Literal::Integer(0))),
+            }),
+        ],
+        docstring: None,
+    })]);
+
+    let output = emit(&m);
+    let expected = "\
+@dataclass()
+class Person:
+    name: str
+    age: int = 0
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn raise_with_expression() {
+    let m = module(vec![Statement::Raise(Raise {
+        exc: Some(Expression::Call {
+            func: Box::new(Expression::Identifier("ValueError".into())),
+            arguments: vec![Expression::Literal(Literal::String("bad value".into()))],
+            keywords: vec![],
+        }),
+        cause: None,
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "raise ValueError('bad value')\n");
+}
+
+#[test]
+fn raise_without_expression() {
+    let m = module(vec![Statement::FunctionDef(Box::new(FunctionDef {
+        name: "handle".into(),
+        decorators: vec![],
+        parameters: vec![],
+        vararg: None,
+        kw_only_params: vec![],
+        kwarg: None,
+        return_annotation: None,
+        body: vec![Statement::Raise(Raise {
+            exc: None,
+            cause: None,
+        })],
+        docstring: None,
+        is_async: false,
+    }))]);
+
+    let output = emit(&m);
+    let expected = "\
+def handle():
+    raise
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn raise_from_cause() {
+    let m = module(vec![Statement::Raise(Raise {
+        exc: Some(Expression::Call {
+            func: Box::new(Expression::Identifier("ValueError".into())),
+            arguments: vec![Expression::Literal(Literal::String("inner".into()))],
+            keywords: vec![],
+        }),
+        cause: Some(Expression::Identifier("e".into())),
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "raise ValueError('inner') from e\n");
+}
+
+#[test]
+fn literal_bytes_simple() {
+    let m = module(vec![Statement::Assign(Assign {
+        target: Expression::Identifier("b".into()),
+        value: Expression::Literal(Literal::Bytes(vec![0xff, 0x00])),
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "b = b'\\xff\\x00'\n");
+}
+
+#[test]
+fn literal_bytes_printable_ascii() {
+    let m = module(vec![Statement::Assign(Assign {
+        target: Expression::Identifier("b".into()),
+        value: Expression::Literal(Literal::Bytes(b"hello".to_vec())),
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "b = b'hello'\n");
+}
+
+#[test]
+fn literal_bytes_with_escapes() {
+    let m = module(vec![Statement::Assign(Assign {
+        target: Expression::Identifier("b".into()),
+        value: Expression::Literal(Literal::Bytes(vec![b'h', b'\n', b'\'', b'\\', 0x80])),
+    })]);
+
+    let output = emit(&m);
+    assert_eq!(output, "b = b'h\\n\\'\\\\\\x80'\n");
+}

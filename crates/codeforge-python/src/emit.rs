@@ -63,6 +63,22 @@ impl Emit for Statement {
                     a.value.to_python()
                 ));
             }
+            Statement::AnnAssign(a) => {
+                if let Some(val) = &a.value {
+                    w.line(&format!(
+                        "{}: {} = {}",
+                        a.target.to_python(),
+                        a.annotation.to_python(),
+                        val.to_python()
+                    ));
+                } else {
+                    w.line(&format!(
+                        "{}: {}",
+                        a.target.to_python(),
+                        a.annotation.to_python()
+                    ));
+                }
+            }
             Statement::AugAssign(a) => {
                 w.line(&format!(
                     "{} {}= {}",
@@ -70,6 +86,18 @@ impl Emit for Statement {
                     a.op.to_python(),
                     a.value.to_python()
                 ));
+            }
+            Statement::Raise(r) => {
+                if let Some(exc) = &r.exc {
+                    let exc_str = exc.to_python();
+                    if let Some(cause) = &r.cause {
+                        w.line(&format!("raise {} from {}", exc_str, cause.to_python()));
+                    } else {
+                        w.line(&format!("raise {}", exc_str));
+                    }
+                } else {
+                    w.line("raise");
+                }
             }
             Statement::If(if_stmt) => if_stmt.emit(w),
             Statement::While(while_stmt) => while_stmt.emit(w),
@@ -442,6 +470,22 @@ impl Literal {
                     .replace('\r', "\\r")
                     .replace('\t', "\\t");
                 format!("'{}'", escaped)
+            }
+            Literal::Bytes(b) => {
+                let mut escaped = String::from("b'");
+                for &byte in b {
+                    match byte {
+                        b'\\' => escaped.push_str("\\\\"),
+                        b'\'' => escaped.push_str("\\'"),
+                        b'\n' => escaped.push_str("\\n"),
+                        b'\r' => escaped.push_str("\\r"),
+                        b'\t' => escaped.push_str("\\t"),
+                        0x20..=0x7e => escaped.push(byte as char),
+                        _ => escaped.push_str(&format!("\\x{:02x}", byte)),
+                    }
+                }
+                escaped.push('\'');
+                escaped
             }
             Literal::None_ => "None".to_string(),
         }

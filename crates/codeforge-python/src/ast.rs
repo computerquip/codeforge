@@ -42,7 +42,9 @@ pub enum Statement {
     ClassDef(ClassDef),
     Return(Option<Expression>),
     Assign(Assign),
+    AnnAssign(AnnAssign),
     AugAssign(AugAssign),
+    Raise(Raise),
     If(Box<IfStatement>),
     While(Box<WhileStatement>),
     For(Box<ForStatement>),
@@ -108,6 +110,21 @@ pub struct AugAssign {
     pub target: Expression,
     pub op: BinaryOperator,
     pub value: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct AnnAssign {
+    pub target: Expression,
+    pub annotation: Type,
+    pub value: Option<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Raise {
+    pub exc: Option<Expression>,
+    pub cause: Option<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -184,6 +201,7 @@ pub enum Literal {
     Float(F64Wrapper),
     Boolean(bool),
     String(String),
+    Bytes(Vec<u8>),
     None_,
 }
 
