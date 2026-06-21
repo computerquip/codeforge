@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1](https://github.com/computerquip/codeforge/compare/codeforge-python-v0.4.0...codeforge-python-v0.4.1) - 2026-06-21
+
+### Added
+
+- *(python)* add convenience helpers for Type, Expression, decorators, and statements
+
 ## [0.4.0](https://github.com/computerquip/codeforge/compare/codeforge-python-v0.3.0...codeforge-python-v0.4.0) - 2026-06-20
 
 ### Added
