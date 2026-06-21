@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "codeforge-cpp"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "codeforge-emit",
  "serde",
@@ -12,11 +12,11 @@ dependencies = [
 
 [[package]]
 name = "codeforge-emit"
-version = "0.4.0"
+version = "0.4.1"
 
 [[package]]
 name = "codeforge-python"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "codeforge-emit",
  "serde",
@@ -24,7 +24,7 @@ dependencies = [
 
 [[package]]
 name = "codeforge-rust"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "codeforge-emit",
  "serde",
