@@ -1361,3 +1361,280 @@ fn literal_bytes_with_escapes() {
     let output = emit(&m);
     assert_eq!(output, "b = b'h\\n\\'\\\\\\x80'\n");
 }
+
+#[test]
+fn type_helpers() {
+    use codeforge_python::Type;
+
+    assert_eq!(Type::custom("MyClass").to_python(), "MyClass");
+    assert_eq!(Type::optional(Type::Str).to_python(), "Optional[str]");
+    assert_eq!(Type::list_of(Type::Int).to_python(), "list[int]");
+    assert_eq!(
+        Type::optional_custom("MyClass").to_python(),
+        "Optional[MyClass]"
+    );
+    assert_eq!(
+        Type::generic_custom("Dict", vec![Type::Str, Type::Int]).to_python(),
+        "Dict[str, int]"
+    );
+    assert_eq!(
+        Type::dict_of(Type::Str, Type::Any).to_python(),
+        "dict[str, Any]"
+    );
+    assert_eq!(Type::set_of(Type::Int).to_python(), "set[int]");
+    assert_eq!(
+        Type::union(vec![Type::Int, Type::Str]).to_python(),
+        "Union[int, str]"
+    );
+    assert_eq!(
+        Type::tuple(vec![Type::Int, Type::Str]).to_python(),
+        "tuple[int, str]"
+    );
+    assert_eq!(
+        Type::callable(vec![Type::Int, Type::Str], Type::Bool).to_python(),
+        "Callable[[int, str], bool]"
+    );
+}
+
+#[test]
+fn expression_helpers() {
+    use codeforge_python::Expression;
+
+    assert_eq!(Expression::ident("foo").to_python(), "foo");
+    assert_eq!(Expression::self_attr("field").to_python(), "self.field");
+    assert_eq!(
+        Expression::attr(Expression::ident("obj"), "field").to_python(),
+        "obj.field"
+    );
+    assert_eq!(
+        Expression::call(Expression::ident("func"), vec![Expression::int_lit(1)]).to_python(),
+        "func(1)"
+    );
+    assert_eq!(
+        Expression::method_call(
+            Expression::ident("obj"),
+            "method",
+            vec![Expression::str_lit("arg")]
+        )
+        .to_python(),
+        "obj.method('arg')"
+    );
+    assert_eq!(Expression::str_lit("hello").to_python(), "'hello'");
+    assert_eq!(Expression::int_lit(42).to_python(), "42");
+    assert_eq!(Expression::bool_lit(true).to_python(), "True");
+}
+
+#[test]
+fn decorator_helpers() {
+    use codeforge_python::decorator;
+
+    let m = module(vec![Statement::FunctionDef(Box::new(FunctionDef {
+        name: "example".into(),
+        decorators: vec![
+            decorator::classmethod(),
+            decorator::staticmethod(),
+            decorator::property(),
+            decorator::named("my_decorator"),
+            decorator::call("dataclass", vec![Expression::bool_lit(true)]),
+            decorator::call_with_keywords(
+                "dataclass",
+                vec![],
+                vec![Keyword {
+                    name: "frozen".into(),
+                    value: Expression::bool_lit(true),
+                }],
+            ),
+        ],
+        parameters: vec![],
+        vararg: None,
+        kw_only_params: vec![],
+        kwarg: None,
+        return_annotation: None,
+        body: vec![Statement::Pass],
+        docstring: None,
+        is_async: false,
+    }))]);
+
+    let output = emit(&m);
+    let expected = "\
+@classmethod
+@staticmethod
+@property
+@my_decorator
+@dataclass(True)
+@dataclass(frozen=True)
+def example():
+    pass
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn stmt_helpers_basic() {
+    use codeforge_python::stmt;
+
+    let m = module(vec![
+        stmt::assign("x", Expression::int_lit(5)),
+        stmt::return_value(Expression::ident("x")),
+        stmt::return_none(),
+    ]);
+
+    let output = emit(&m);
+    let expected = "\
+x = 5
+return x
+return None
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn stmt_helpers_assign_call() {
+    use codeforge_python::stmt;
+
+    let m = module(vec![
+        stmt::assign_call("result", "encode", vec![Expression::ident("data")]),
+        stmt::assign_method_call(
+            "items",
+            Expression::ident("obj"),
+            "get_items",
+            vec![Expression::int_lit(10)],
+        ),
+    ]);
+
+    let output = emit(&m);
+    let expected = "\
+result = encode(data)
+items = obj.get_items(10)
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn stmt_helpers_method_call_and_extend() {
+    use codeforge_python::stmt;
+
+    let m = module(vec![
+        stmt::method_call(
+            Expression::ident("encoder"),
+            "write_tag",
+            vec![Expression::int_lit(0x30)],
+        ),
+        stmt::extend(Expression::ident("result"), Expression::ident("data")),
+        stmt::expr_stmt(Expression::call(
+            Expression::ident("print"),
+            vec![Expression::str_lit("done")],
+        )),
+    ]);
+
+    let output = emit(&m);
+    let expected = "\
+encoder.write_tag(48)
+result.extend(data)
+print('done')
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn stmt_helpers_control_flow() {
+    use codeforge_python::stmt;
+
+    let m = module(vec![
+        stmt::if_simple(
+            Expression::BinaryOp {
+                left: Box::new(Expression::ident("x")),
+                op: BinaryOperator::Gt,
+                right: Box::new(Expression::int_lit(0)),
+            },
+            vec![stmt::return_value(Expression::ident("x"))],
+        ),
+        stmt::for_simple(
+            Expression::ident("item"),
+            Expression::ident("items"),
+            vec![stmt::method_call(
+                Expression::ident("result"),
+                "append",
+                vec![Expression::ident("item")],
+            )],
+        ),
+    ]);
+
+    let output = emit(&m);
+    let expected = "\
+if x > 0:
+    return x
+for item in items:
+    result.append(item)
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn complete_class_with_helpers() {
+    use codeforge_python::{Type, decorator, stmt};
+
+    let m = module(vec![Statement::ClassDef(ClassDef {
+        name: "Encoder".into(),
+        decorators: vec![decorator::call("dataclass", vec![])],
+        bases: vec![],
+        keywords: vec![],
+        body: vec![
+            Statement::AnnAssign(AnnAssign {
+                target: Expression::ident("name"),
+                annotation: Type::Str,
+                value: None,
+            }),
+            Statement::AnnAssign(AnnAssign {
+                target: Expression::ident("value"),
+                annotation: Type::Int,
+                value: Some(Expression::int_lit(0)),
+            }),
+            Statement::FunctionDef(Box::new(FunctionDef {
+                name: "encode".into(),
+                decorators: vec![],
+                parameters: vec![Parameter {
+                    name: "self".into(),
+                    annotation: None,
+                    default: None,
+                }],
+                vararg: None,
+                kw_only_params: vec![],
+                kwarg: None,
+                return_annotation: Some(Type::Self_),
+                body: vec![
+                    stmt::assign_call("enc", "DerEncoder", vec![]),
+                    stmt::method_call(
+                        Expression::ident("enc"),
+                        "write_tag",
+                        vec![Expression::int_lit(0x02)],
+                    ),
+                    stmt::method_call(
+                        Expression::ident("enc"),
+                        "write_int",
+                        vec![Expression::self_attr("value")],
+                    ),
+                    stmt::return_value(Expression::method_call(
+                        Expression::ident("enc"),
+                        "finish",
+                        vec![],
+                    )),
+                ],
+                docstring: None,
+                is_async: false,
+            })),
+        ],
+        docstring: None,
+    })]);
+
+    let output = emit(&m);
+    assert!(output.contains("@dataclass()"));
+    assert!(output.contains("class Encoder:"));
+    assert!(output.contains("name: str"));
+    assert!(output.contains("value: int = 0"));
+    assert!(output.contains("def encode(self) -> Self"));
+    assert!(output.contains("enc = DerEncoder()"));
+    assert!(output.contains("enc.write_tag(2)"));
+    assert!(output.contains("enc.write_int(self.value)"));
+    assert!(output.contains("return enc.finish()"));
+}

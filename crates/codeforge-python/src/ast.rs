@@ -286,3 +286,96 @@ pub enum UnaryOperator {
     Not,
     BitNot,
 }
+
+impl Type {
+    pub fn custom(s: &str) -> Self {
+        Type::Custom(s.to_string())
+    }
+
+    pub fn optional(inner: Type) -> Self {
+        Type::Optional(Box::new(inner))
+    }
+
+    pub fn list_of(inner: Type) -> Self {
+        Type::List(Box::new(inner))
+    }
+
+    pub fn optional_custom(s: &str) -> Self {
+        Self::optional(Self::custom(s))
+    }
+
+    pub fn generic_custom(name: &str, args: Vec<Type>) -> Self {
+        Type::Generic(name.to_string(), args)
+    }
+
+    pub fn dict_of(key: Type, value: Type) -> Self {
+        Type::Dict(Box::new(key), Box::new(value))
+    }
+
+    pub fn set_of(inner: Type) -> Self {
+        Type::Set(Box::new(inner))
+    }
+
+    pub fn union(types: Vec<Type>) -> Self {
+        Type::Union(types)
+    }
+
+    pub fn tuple(types: Vec<Type>) -> Self {
+        Type::Tuple(types)
+    }
+
+    pub fn callable(params: Vec<Type>, ret: Type) -> Self {
+        Type::Callable(params, Box::new(ret))
+    }
+}
+
+impl Expression {
+    pub fn ident(s: &str) -> Self {
+        Expression::Identifier(s.to_string())
+    }
+
+    pub fn self_attr(field: &str) -> Self {
+        Expression::Attribute {
+            object: Box::new(Expression::Identifier("self".to_string())),
+            name: field.to_string(),
+        }
+    }
+
+    pub fn attr(object: Expression, field: &str) -> Self {
+        Expression::Attribute {
+            object: Box::new(object),
+            name: field.to_string(),
+        }
+    }
+
+    pub fn call(func: Expression, args: Vec<Expression>) -> Self {
+        Expression::Call {
+            func: Box::new(func),
+            arguments: args,
+            keywords: vec![],
+        }
+    }
+
+    pub fn method_call(receiver: Expression, method: &str, args: Vec<Expression>) -> Self {
+        Expression::Call {
+            func: Box::new(Expression::Attribute {
+                object: Box::new(receiver),
+                name: method.to_string(),
+            }),
+            arguments: args,
+            keywords: vec![],
+        }
+    }
+
+    pub fn str_lit(s: &str) -> Self {
+        Expression::Literal(Literal::String(s.to_string()))
+    }
+
+    pub fn int_lit(i: i64) -> Self {
+        Expression::Literal(Literal::Integer(i))
+    }
+
+    pub fn bool_lit(b: bool) -> Self {
+        Expression::Literal(Literal::Boolean(b))
+    }
+}
