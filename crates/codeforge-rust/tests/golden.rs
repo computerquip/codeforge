@@ -2177,3 +2177,344 @@ fn abi_escaping() {
         output
     );
 }
+
+#[test]
+fn helpers_struct_with_methods() {
+    use codeforge_rust::{attr, expr, param, ty, vis};
+
+    let m = module(vec![
+        Item::Struct(Struct {
+            attributes: vec![attr::derive(&["Debug", "Clone"])],
+            visibility: vis::public(),
+            name: "Counter".into(),
+            generics: empty_generics(),
+            kind: StructKind::Named(vec![
+                Field {
+                    attributes: vec![],
+                    visibility: vis::private(),
+                    name: "value".into(),
+                    ty: Type::I64,
+                },
+                Field {
+                    attributes: vec![],
+                    visibility: vis::private(),
+                    name: "name".into(),
+                    ty: ty::string(),
+                },
+            ]),
+        }),
+        Item::Impl(Impl {
+            attributes: vec![],
+            generics: empty_generics(),
+            trait_: None,
+            self_ty: Type::path("Counter"),
+            is_unsafe: false,
+            items: vec![
+                AssocItem::Function(
+                    function::build("new")
+                        .param(param::typed("name", ty::reference(Type::Str)))
+                        .returns(Type::SelfType)
+                        .body_trailing(
+                            vec![],
+                            expr::struct_literal(
+                                "Counter",
+                                vec![
+                                    expr::field_init("value", expr::int_lit(0)),
+                                    expr::field_init(
+                                        "name",
+                                        expr::call(
+                                            expr::ident("String::from"),
+                                            vec![expr::ident("name")],
+                                        ),
+                                    ),
+                                ],
+                                None,
+                            ),
+                        )
+                        .build(),
+                ),
+                AssocItem::Function(
+                    function::build("value")
+                        .param(param::self_ref())
+                        .returns(Type::I64)
+                        .body_trailing(vec![], expr::self_field("value"))
+                        .build(),
+                ),
+                AssocItem::Function(
+                    function::build("increment")
+                        .param(param::self_mut())
+                        .empty_body()
+                        .build(),
+                ),
+            ],
+        }),
+    ]);
+
+    let output = emit(&m);
+    let expected = "\
+#[derive(Debug, Clone)]
+pub struct Counter {
+    value: i64,
+    name: String,
+}
+
+impl Counter {
+    fn new(name: &str) -> Self {
+        Counter { value: 0, name: String::from(name) }
+    }
+
+    fn value(&self) -> i64 {
+        self.value
+    }
+
+    fn increment(&mut self) {
+    }
+}
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn helpers_impl_block_with_expressions() {
+    use codeforge_rust::{expr, param, stmt, ty};
+
+    let m = module(vec![Item::Impl(Impl {
+        attributes: vec![],
+        generics: empty_generics(),
+        trait_: Some(Type::path("Display")),
+        self_ty: Type::path("Point"),
+        is_unsafe: false,
+        items: vec![AssocItem::Function(
+            function::build("fmt")
+                .param(param::self_ref())
+                .param(param::typed(
+                    "f",
+                    ty::mut_reference(ty::reference(Type::path("Formatter"))),
+                ))
+                .returns(ty::result(Type::Unit, Type::path("fmt::Error")))
+                .body_trailing(
+                    vec![stmt::expr_stmt(expr::method_call(
+                        expr::ident("f"),
+                        "write_str",
+                        vec![expr::macro_call("format!", "\"({}, {})\"")],
+                    ))],
+                    expr::return_none(),
+                )
+                .build(),
+        )],
+    })]);
+
+    let output = emit(&m);
+    let expected = "\
+impl Display for Point {
+    fn fmt(&self, f: &mut &Formatter) -> Result<(), fmt::Error> {
+        f.write_str(format!(\"({}, {})\"));
+        return;
+    }
+}
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn helpers_enum_with_variants() {
+    use codeforge_rust::{attr, ty, vis};
+
+    let m = module(vec![Item::Enum(Enum {
+        attributes: vec![attr::derive(&["Debug", "Clone", "PartialEq"])],
+        visibility: vis::public(),
+        name: "Command".into(),
+        generics: empty_generics(),
+        variants: vec![
+            EnumVariant {
+                attributes: vec![],
+                name: "Quit".into(),
+                kind: VariantKind::Unit,
+                discriminant: None,
+            },
+            EnumVariant {
+                attributes: vec![],
+                name: "Move".into(),
+                kind: VariantKind::Named(vec![
+                    Field {
+                        attributes: vec![],
+                        visibility: vis::private(),
+                        name: "x".into(),
+                        ty: Type::I32,
+                    },
+                    Field {
+                        attributes: vec![],
+                        visibility: vis::private(),
+                        name: "y".into(),
+                        ty: Type::I32,
+                    },
+                ]),
+                discriminant: None,
+            },
+            EnumVariant {
+                attributes: vec![],
+                name: "Write".into(),
+                kind: VariantKind::Tuple(vec![ty::string()]),
+                discriminant: None,
+            },
+            EnumVariant {
+                attributes: vec![],
+                name: "ChangeColor".into(),
+                kind: VariantKind::Tuple(vec![Type::I32, Type::I32, Type::I32]),
+                discriminant: None,
+            },
+        ],
+    })]);
+
+    let output = emit(&m);
+    let expected = "\
+#[derive(Debug, Clone, PartialEq)]
+pub enum Command {
+    Quit,
+    Move {
+        x: i32,
+        y: i32,
+    },
+    Write(String),
+    ChangeColor(i32, i32, i32),
+}
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn helpers_type_constructors() {
+    use codeforge_rust::ty;
+
+    assert_eq!(ty::reference(Type::Str).to_rust(), "&str");
+    assert_eq!(ty::mut_reference(Type::I32).to_rust(), "&mut i32");
+    assert_eq!(
+        ty::reference_with_lifetime("a", true, Type::I32).to_rust(),
+        "&'a mut i32"
+    );
+    assert_eq!(ty::pointer(Type::U8).to_rust(), "*const u8");
+    assert_eq!(ty::mut_pointer(Type::U8).to_rust(), "*mut u8");
+    assert_eq!(ty::slice(Type::U8).to_rust(), "[u8]");
+    assert_eq!(ty::array(Type::I32, 4).to_rust(), "[i32; 4]");
+    assert_eq!(ty::option(Type::I32).to_rust(), "Option<i32>");
+    assert_eq!(ty::vec(ty::string()).to_rust(), "Vec<String>");
+    assert_eq!(ty::box_(Type::I32).to_rust(), "Box<i32>");
+    assert_eq!(
+        ty::result(Type::I32, Type::path("Error")).to_rust(),
+        "Result<i32, Error>"
+    );
+    assert_eq!(ty::string().to_rust(), "String");
+    assert_eq!(
+        ty::tuple(vec![Type::I32, Type::F64]).to_rust(),
+        "(i32, f64)"
+    );
+    assert_eq!(
+        ty::fn_ptr(vec![Type::I32], Some(Type::Bool)).to_rust(),
+        "fn(i32) -> bool"
+    );
+    assert_eq!(
+        ty::trait_object(vec![Type::path("Write"), Type::path("Send")]).to_rust(),
+        "dyn Write + Send"
+    );
+    assert_eq!(
+        ty::impl_trait(vec![Type::path("Iterator")]).to_rust(),
+        "impl Iterator"
+    );
+}
+
+#[test]
+fn helpers_visibility_and_attrs() {
+    use codeforge_rust::{attr, vis};
+
+    assert_eq!(vis::public(), Visibility::Public);
+    assert_eq!(vis::private(), Visibility::Private);
+    assert_eq!(vis::crate_(), Visibility::Crate);
+    assert_eq!(vis::super_(), Visibility::Super);
+    assert_eq!(
+        vis::restricted("crate::inner"),
+        Visibility::Restricted("crate::inner".to_string())
+    );
+
+    let d = attr::derive(&["Debug", "Clone"]);
+    assert_eq!(d.path, "derive");
+    assert_eq!(d.tokens, Some("Debug, Clone".to_string()));
+
+    let a = attr::allow("dead_code");
+    assert_eq!(a.path, "allow");
+    assert_eq!(a.tokens, Some("dead_code".to_string()));
+
+    let c = attr::cfg("test");
+    assert_eq!(c.path, "cfg");
+    assert_eq!(c.tokens, Some("test".to_string()));
+}
+
+#[test]
+fn helpers_expr_constructors() {
+    use codeforge_rust::expr;
+
+    assert_eq!(expr::ident("x").to_rust(), "x");
+    assert_eq!(
+        expr::path(&["std", "io", "Result"]).to_rust(),
+        "std::io::Result"
+    );
+    assert_eq!(expr::str_lit("hi").to_rust(), "\"hi\"");
+    assert_eq!(expr::int_lit(42).to_rust(), "42");
+    assert_eq!(expr::bool_lit(true).to_rust(), "true");
+    assert_eq!(expr::char_lit('z').to_rust(), "'z'");
+    assert_eq!(expr::self_().to_rust(), "self");
+    assert_eq!(expr::self_field("x").to_rust(), "self.x");
+    assert_eq!(
+        expr::call(expr::ident("foo"), vec![expr::int_lit(1)]).to_rust(),
+        "foo(1)"
+    );
+    assert_eq!(
+        expr::method_call(expr::ident("v"), "push", vec![expr::int_lit(1)]).to_rust(),
+        "v.push(1)"
+    );
+    assert_eq!(expr::field(expr::ident("s"), "len").to_rust(), "s.len");
+    assert_eq!(expr::ref_expr(expr::ident("x")).to_rust(), "&x");
+    assert_eq!(expr::mut_ref(expr::ident("x")).to_rust(), "&mut x");
+    assert_eq!(
+        expr::struct_literal("P", vec![expr::field_init("x", expr::int_lit(1))], None).to_rust(),
+        "P { x: 1 }"
+    );
+    assert_eq!(
+        expr::binary(expr::ident("a"), BinaryOperator::Add, expr::ident("b")).to_rust(),
+        "a + b"
+    );
+    assert_eq!(expr::return_expr(expr::int_lit(0)).to_rust(), "return 0");
+    assert_eq!(expr::return_none().to_rust(), "return");
+    assert_eq!(
+        expr::macro_call("println!", "\"hi\"").to_rust(),
+        "println!(\"hi\")"
+    );
+}
+
+#[test]
+fn helpers_stmt_constructors() {
+    use codeforge_rust::expr;
+    use codeforge_rust::stmt;
+
+    let m = module(vec![fn_with_body(
+        "main",
+        vec![
+            stmt::let_binding("x", expr::int_lit(10)),
+            stmt::let_mut("y", expr::int_lit(20)),
+            stmt::let_typed("z", Type::I32, expr::int_lit(30)),
+            stmt::comment("compute result"),
+            stmt::return_expr(expr::ident("z")),
+        ],
+    )]);
+
+    let output = emit(&m);
+    let expected = "\
+fn main() {
+    let x = 10;
+    let mut y = 20;
+    let z: i32 = 30;
+    // compute result
+    return z;
+}
+";
+    assert_eq!(output, expected);
+}

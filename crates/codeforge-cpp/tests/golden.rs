@@ -718,3 +718,295 @@ class HashMap {
 ";
     assert_eq!(output, expected);
 }
+
+// ── Helper-based tests ──────────────────────────────────────────────────────
+
+#[test]
+fn helpers_class_with_methods_and_fields() {
+    let p = Program {
+        directives: vec![
+            directive::include_system("string"),
+            directive::include_system("iostream"),
+        ],
+        namespaces: vec![],
+        declarations: vec![Declaration::Class(Class {
+            name: "Logger".into(),
+            base_classes: vec![],
+            members: vec![
+                ClassMember::Access(AccessSpecifier::Private),
+                ClassMember::Field(Field {
+                    name: "name_".into(),
+                    var_type: Type::String,
+                    initializer: None,
+                    access: AccessSpecifier::Private,
+                    is_const: false,
+                    is_static: false,
+                    is_thread_local: false,
+                }),
+                ClassMember::Access(AccessSpecifier::Public),
+                ClassMember::Constructor(Constructor {
+                    parameters: vec![Parameter {
+                        name: "name".into(),
+                        param_type: Type::const_ref(Type::String),
+                        default_value: None,
+                    }],
+                    initializer_list: vec![MemberInitializer {
+                        member_name: "name_".into(),
+                        value: Expression::ident("name"),
+                    }],
+                    body: Block { statements: vec![] },
+                    is_explicit: true,
+                    is_deleted: false,
+                    is_defaulted: false,
+                }),
+                ClassMember::Destructor(Destructor {
+                    is_virtual: false,
+                    is_deleted: false,
+                    is_defaulted: true,
+                }),
+                ClassMember::Method(Function {
+                    name: "log".into(),
+                    return_type: Type::Void,
+                    parameters: vec![Parameter {
+                        name: "msg".into(),
+                        param_type: Type::const_ref(Type::String),
+                        default_value: None,
+                    }],
+                    body: Some(Block {
+                        statements: vec![stmt::expr_stmt(Expression::call(
+                            Expression::ident("std::cout"),
+                            vec![Expression::ptr_member(Expression::ident("this"), "name_")],
+                        ))],
+                    }),
+                    is_const: false,
+                    is_inline: false,
+                    is_static: false,
+                    is_virtual: false,
+                    is_pure_virtual: false,
+                    is_override: false,
+                    is_noexcept: false,
+                }),
+                ClassMember::Method(Function {
+                    name: "get_name".into(),
+                    return_type: Type::const_ref(Type::String),
+                    parameters: vec![],
+                    body: Some(Block {
+                        statements: vec![stmt::return_expr(Expression::ptr_member(
+                            Expression::ident("this"),
+                            "name_",
+                        ))],
+                    }),
+                    is_const: true,
+                    is_inline: false,
+                    is_static: false,
+                    is_virtual: false,
+                    is_pure_virtual: false,
+                    is_override: false,
+                    is_noexcept: true,
+                }),
+            ],
+            is_final: false,
+        })],
+    };
+
+    let output = emit(&p);
+    let expected = "\
+#include <string>
+#include <iostream>
+
+class Logger {
+    private:
+    private std::string name_;
+    public:
+    explicit Logger(const std::string& name) :
+        name_(name)
+    {
+    }
+    ~Logger() = default;
+    void log(const std::string& msg) {
+        std::cout(this->name_);
+    }
+    const std::string& get_name() const noexcept {
+        return this->name_;
+    }
+};
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn helpers_function_with_directives() {
+    let p = Program {
+        directives: vec![
+            directive::ifndef("GUARD_H"),
+            directive::define("GUARD_H"),
+            directive::include_system("cstdint"),
+            directive::include_system("vector"),
+        ],
+        namespaces: vec![],
+        declarations: vec![Declaration::Function(Function {
+            name: "compute".into(),
+            return_type: Type::Int32,
+            parameters: vec![Parameter {
+                name: "n".into(),
+                param_type: Type::Int32,
+                default_value: None,
+            }],
+            body: Some(Block {
+                statements: vec![
+                    stmt::declaration(Type::Int32, "result", Some(Expression::int_lit(0))),
+                    stmt::for_simple(
+                        stmt::declaration(Type::Int32, "i", Some(Expression::int_lit(0))),
+                        Expression::BinaryOp {
+                            left: Box::new(Expression::ident("i")),
+                            op: BinaryOperator::Lt,
+                            right: Box::new(Expression::ident("n")),
+                        },
+                        Expression::UnaryOp {
+                            op: UnaryOperator::PostInc,
+                            operand: Box::new(Expression::ident("i")),
+                        },
+                        vec![stmt::expr_stmt(Expression::BinaryOp {
+                            left: Box::new(Expression::ident("result")),
+                            op: BinaryOperator::AddAssign,
+                            right: Box::new(Expression::ident("i")),
+                        })],
+                    ),
+                    stmt::return_expr(Expression::ident("result")),
+                ],
+            }),
+            is_const: false,
+            is_inline: false,
+            is_static: false,
+            is_virtual: false,
+            is_pure_virtual: false,
+            is_override: false,
+            is_noexcept: false,
+        })],
+    };
+
+    let output = emit(&p);
+    let expected = "\
+#ifndef GUARD_H
+#define GUARD_H
+#include <cstdint>
+#include <vector>
+
+int32_t compute(int32_t n) {
+    int32_t result = 0;
+    for (int32_t i = 0; i < n; i++) {
+        result += i;
+    }
+    return result;
+}
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn helpers_template_with_type_helpers() {
+    let p = program(vec![Declaration::Template(Box::new(Template {
+        parameters: vec![TemplateParameter::Type {
+            name: "T".into(),
+            default: None,
+        }],
+        declaration: Box::new(Declaration::Function(Function {
+            name: "make_vector".into(),
+            return_type: Type::vector(Type::custom("T")),
+            parameters: vec![Parameter {
+                name: "value".into(),
+                param_type: Type::const_ref(Type::custom("T")),
+                default_value: None,
+            }],
+            body: Some(Block {
+                statements: vec![
+                    stmt::declaration(Type::vector(Type::custom("T")), "v", None),
+                    stmt::expr_stmt(Expression::method_call(
+                        Expression::ident("v"),
+                        "push_back",
+                        vec![Expression::ident("value")],
+                    )),
+                    stmt::return_expr(Expression::ident("v")),
+                ],
+            }),
+            is_const: false,
+            is_inline: false,
+            is_static: false,
+            is_virtual: false,
+            is_pure_virtual: false,
+            is_override: false,
+            is_noexcept: false,
+        })),
+    }))]);
+
+    let output = emit(&p);
+    let expected = "\
+template <typename T>
+std::vector<T> make_vector(const T& value) {
+    std::vector<T> v;
+    v.push_back(value);
+    return v;
+}
+";
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn helpers_type_helpers_various() {
+    let p = program(vec![
+        Declaration::Variable(LocalVariable {
+            name: "names".into(),
+            var_type: Type::vector(Type::String),
+            initializer: None,
+            is_const: false,
+            is_static: false,
+            is_thread_local: false,
+        }),
+        Declaration::Variable(LocalVariable {
+            name: "scores".into(),
+            var_type: Type::map(Type::String, Type::Int32),
+            initializer: None,
+            is_const: false,
+            is_static: false,
+            is_thread_local: false,
+        }),
+        Declaration::Variable(LocalVariable {
+            name: "maybe_name".into(),
+            var_type: Type::optional(Type::String),
+            initializer: None,
+            is_const: false,
+            is_static: false,
+            is_thread_local: false,
+        }),
+        Declaration::Variable(LocalVariable {
+            name: "ptr".into(),
+            var_type: Type::unique_ptr(Type::custom("Widget")),
+            initializer: Some(Expression::new_expr("Widget", vec![])),
+            is_const: false,
+            is_static: false,
+            is_thread_local: false,
+        }),
+        Declaration::Variable(LocalVariable {
+            name: "shared".into(),
+            var_type: Type::shared_ptr(Type::custom("Widget")),
+            initializer: None,
+            is_const: false,
+            is_static: false,
+            is_thread_local: false,
+        }),
+    ]);
+
+    let output = emit(&p);
+    let expected = "\
+std::vector<std::string> names;
+
+std::map<std::string, int32_t> scores;
+
+std::optional<std::string> maybe_name;
+
+std::unique_ptr<Widget> ptr = new Widget();
+
+std::shared_ptr<Widget> shared;
+";
+    assert_eq!(output, expected);
+}
